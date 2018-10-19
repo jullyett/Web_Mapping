@@ -3,6 +3,7 @@
 var queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson";
 var global_earthquakeData;
 
+
 // Perform a GET request to the query URL
 d3.json(queryUrl, function(data) {
   global_earthquakeData = data.features;
@@ -11,6 +12,7 @@ d3.json(queryUrl, function(data) {
   createFeatures(data.features);
   console.log(data.features);
 });
+
 
 function createFeatures(earthquakeData) {
 
@@ -77,7 +79,6 @@ function createFeatures(earthquakeData) {
 }
 
 
-
 function createMap(earthquakes) {
 
   // Define streetmap and darkmap layers
@@ -95,24 +96,47 @@ function createMap(earthquakes) {
     accessToken: API_KEY
   });
 
-  // Define a baseMaps object to hold our base layers
-  var baseMaps = {
-    "Satellite Map": satellite_map,
-    "Dark Map": darkmap
-  };
-
-  // Create overlay object to hold our overlay layer
-  var overlayMaps = {
-    Earthquakes: earthquakes
-  };
+  var lightmap = L.tileLayer("https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}", {
+    attribution: "Map data &copy; <a href=\"https://www.openstreetmap.org/\">OpenStreetMap</a> contributors, <a href=\"https://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, Imagery © <a href=\"https://www.mapbox.com/\">Mapbox</a>",
+    maxZoom: 18,
+    id: "mapbox.light",
+    accessToken: API_KEY
+  });
 
   // Create our map, giving it the streetmap and earthquakes layers to display on load
   var myMap = L.map("map", {
     center: [
       37.09, -95.71
     ],
-    zoom: 5,
-    layers: [satellite_map, earthquakes]
+    zoom: 3,
+    layers: [darkmap, earthquakes]
+  });
+
+  //Tectonic plates 
+
+  // Store our API endpoint inside queryUrl
+  // We are retrieving data for ALL earthquakes in the past day
+
+  var faults = new L.layerGroup();
+
+  var faultsUrl = 
+  "https://raw.githubusercontent.com/fraxen/tectonicplates/master/GeoJSON/PB2002_boundaries.json"
+
+  // Perform a GET request to the query URL
+  d3.json(faultsUrl, function(plates) {
+
+    platesData = plates.features;
+    console.log(plates.features);
+
+    // Create a GeoJSON layer containing the features array on the tectonic plates
+    
+    L.geoJSON(plates, {
+      style: {
+        color: "orange"
+      }
+    }).addTo(faults);
+    faults.addTo(myMap);
+    
   });
 
   //Create legend
@@ -146,6 +170,19 @@ function createMap(earthquakes) {
 };
 
   legend.addTo(myMap);
+
+// Define a baseMaps object to hold our base layers
+var baseMaps = {
+  "Dark Map": darkmap,
+  "Satellite Map": satellite_map,
+  "Greyscale Map": lightmap
+};
+
+// Create overlay object to hold our overlay layer
+var overlayMaps = {
+  "Earthquakes": earthquakes,
+  "Fault lines": faults
+};
 
   // Create a layer control
   // Pass in our baseMaps and overlayMaps
